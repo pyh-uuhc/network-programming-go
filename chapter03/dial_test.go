@@ -15,20 +15,24 @@ func TestDial(t *testing.T) {
 	// 1. 서버 역할
 
 	done := make(chan struct{}) // 채널을 생성하여 고루틴의 완료를 통보한다.
+
+	// 서버 역할을 하는 고루틴을 시작한다.
 	go func() {
-		defer func() { done <- struct{}{} }()
+		defer func() { done <- struct{}{} }() // 함수가 종료될 때 done 채널에 신호를 보낸다.
 
 		for {
+			// 클라이언트로부터 새로운 TCP 연결을 수락한다.
 			conn, err := listener.Accept() // 새로운 TCP 연결을 수락한다.
 			if err != nil {
-				t.Log(err)
+				t.Log(err) // 오류가 발생하면 로그를 출력한다.
 				return
 			}
 
+			// 새로운 연결을 처리하는 고루틴을 시작한다.
 			go func(c net.Conn) { // 또 다른 고루틴이 생성된 연결에서 데이터를 읽는다.
 				defer func() {
-					c.Close()
-					done <- struct{}{}
+					c.Close()          // 연결을 닫는다.
+					done <- struct{}{} // 함수가 종료될 때 done 채널에 신호를 보낸다.
 				}()
 
 				buf := make([]byte, 1024)
@@ -48,6 +52,7 @@ func TestDial(t *testing.T) {
 
 	// 2. 클라이언트 역할
 
+	// 클라이언트 역할을 하는 고루틴에서 서버에 TCP 연결을 시도한다.
 	conn, err := net.Dial("tcp", listener.Addr().String()) // 리스너의 주소로 TCP 연결을 연다.
 	if err != nil {
 		t.Fatal(err)
